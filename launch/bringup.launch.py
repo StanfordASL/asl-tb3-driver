@@ -41,6 +41,10 @@ def generate_launch_description():
             description="Connected USB port with OpenCR"
         ),
 
+        ########################################################
+        # -------------------- TurtleBot3 -------------------- #
+        ########################################################
+
         IncludeLaunchDescription(
             PathJoinSubstitution([
                 FindPackageShare("turtlebot3_bringup"),
@@ -48,7 +52,6 @@ def generate_launch_description():
                 "turtlebot3_state_publisher.launch.py",
             ]),
         ),
-
         Node(
             package="turtlebot3_node",
             executable="turtlebot3_ros",
@@ -60,5 +63,22 @@ def generate_launch_description():
                 ]),
             ],
             arguments=["-i", usb_port],
-        )
+        ),
+
+        ########################################################
+        # --------------------- Velodyne --------------------- #
+        ########################################################
+
+        IncludeLaunchDescription(
+            PathJoinSubstitution([
+                FindPackageShare("velodyne"),
+                "launch",
+                "velodyne-all-nodes-VLP16-launch.py",
+            ]),
+        ),
+        Node(
+            package="tf2_ros",
+            executable="static_transform_publisher",
+            arguments=[0.0175, 0, 0.215, 0, 0, 0, 1, "base_footprint", "velodyne"],
+        ),
     ])
