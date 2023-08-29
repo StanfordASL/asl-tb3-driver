@@ -73,12 +73,27 @@ def generate_launch_description():
             PathJoinSubstitution([
                 FindPackageShare("velodyne"),
                 "launch",
-                "velodyne-all-nodes-VLP16-launch.py",
+                "velodyne-all-nodes-VLP16-composed-launch.py",
             ]),
         ),
         Node(
             package="tf2_ros",
             executable="static_transform_publisher",
             arguments=["0.0175", "0", "0.215", "0", "0", "0", "1", "base_footprint", "velodyne"],
+        ),
+
+        ########################################################
+        # ----------------------- SLAM ----------------------- #
+        ########################################################
+
+        Node(
+            parameters=[
+                PathJoinSubstitution([FindPackageShare("asl_tb3_driver"), "configs", "slam_toolbox_sync.yaml"]),
+                {"use_sim_time": False},
+            ],
+            package='slam_toolbox',
+            executable='async_slam_toolbox_node',
+            name='slam_toolbox',
+            output='screen'
         ),
     ])
