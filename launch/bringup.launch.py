@@ -88,12 +88,11 @@ def generate_launch_description():
 
         Node(
             parameters=[
-                PathJoinSubstitution([FindPackageShare("asl_tb3_driver"), "configs", "slam_toolbox_sync.yaml"]),
+                PathJoinSubstitution([FindPackageShare("asl_tb3_driver"), "configs", "slam_params.yaml"]),
                 {"use_sim_time": False},
             ],
             package='slam_toolbox',
             executable='async_slam_toolbox_node',
             name='slam_toolbox',
-            output='screen'
         ),
     ])
