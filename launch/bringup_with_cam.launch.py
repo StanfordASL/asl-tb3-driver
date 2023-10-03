@@ -49,7 +49,7 @@ def generate_launch_description():
             package="image_tools",
             executable="cam2image",
             output="log",
-            ros_arguements=["--log-level", "cam2image:=WARN"]
+            ros_arguments=["--log-level", "cam2image:=WARN"]
         ),
 
         Node(
