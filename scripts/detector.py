@@ -11,7 +11,6 @@ import cv2
 
 import torch
 from torchvision import transforms
-from torchvision.models.mobilenetv3 import MobileNet_V3_Small_Weights, MobileNet_V3_Large_Weights
 
 
 class MobileNetDetector(Node):
@@ -45,7 +44,7 @@ class MobileNetDetector(Node):
         self.model = torch.hub.load(
             "pytorch/vision:v0.10.0",
             "mobilenet_v3_large",
-            weights=MobileNet_V3_Large_Weights.IMAGENET1K_V1,
+            pretrained=True,
         )
 
         # Check CUDA

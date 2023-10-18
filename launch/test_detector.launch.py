@@ -45,9 +45,9 @@ def generate_launch_description():
                 parameters=[
                     {
                         "threshold": 0.3,
-                        "target_class": "power drill",
+                        "target_class": "laptop",
                         "republish_img": True,
-                        "classes_path": "/home/javier/workspace/tb_ws/src/asl-tb3-driver/configs/imagenet_classes.txt",
+                        "classes_path": "/home/aa274/ros2_ws/src/asl-tb3-driver/configs/imagenet_classes.txt",
                     },
                 ],
             ),
