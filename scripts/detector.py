@@ -136,5 +136,3 @@ if __name__ == "__main__":
     rclpy.spin(node)
     rclpy.shutdown()
 
-
-    MobileNetDetector()
