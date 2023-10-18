@@ -2,7 +2,6 @@
 import time
 import pdb
 
-import numpy as np
 import rclpy
 from rclpy.node import Node
 from cv_bridge import CvBridge
@@ -12,7 +11,6 @@ import cv2
 
 import torch
 from torchvision import transforms
-from torchvision.models.detection import ssdlite320_mobilenet_v3_large
 
 
 class MobileNetDetector(Node):
@@ -43,12 +41,11 @@ class MobileNetDetector(Node):
             raise e
 
         # load the model from torch hub
-        #self.model = torch.hub.load(
-        #    "pytorch/vision:v0.10.0",
-        #    "ssdlite320_mobilenet_v3_large",
-        #    pretrained=True,
-        #)
-        self.model = ssdlite320_mobilenet_v3_large(pretrained=True)
+        self.model = torch.hub.load(
+            "pytorch/vision:v0.10.0",
+            "mobilenet_v3_large",
+            pretrained=True,
+        )
 
         # Check CUDA
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -61,11 +58,11 @@ class MobileNetDetector(Node):
         self.preprocess = transforms.Compose(
             [
                 transforms.ToTensor(),
-                #transforms.Resize(256, antialias=True),
-                #transforms.CenterCrop(224),
-                #transforms.Normalize(
-                #    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                #),
+                transforms.Resize(256, antialias=True),
+                transforms.CenterCrop(224),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),
             ]
         )
 
@@ -87,36 +84,35 @@ class MobileNetDetector(Node):
         img = self.bridge.imgmsg_to_cv2(img_msg, "bgr8")
 
         # Run model on image
-        self.classify(img[..., ::-1].copy())
-        #top3_p, top3_id, target_prob, inf_time = self.classify(img.copy())
+        top3_p, top3_id, target_prob, inf_time = self.classify(img.copy())
 
-        # detection_bool = target_prob >= self.threshold
+        detection_bool = target_prob >= self.threshold
 
-        # # Publish detection message
-        # bool_msg = Bool()
-        # bool_msg.data = detection_bool
-        # self.detection_bool_pub.publish(bool_msg)
+        # Publish detection message
+        bool_msg = Bool()
+        bool_msg.data = detection_bool
+        self.detection_bool_pub.publish(bool_msg)
 
-        # # Top-K categories
-        # top3_msg = String()
-        # for i in range(3):
-        #     top3_msg.data += (
-        #         f"{self.categories[top3_id[i]]} [p={top3_p[i].item():0.2f}] |"
-        #     )
-        # self.detection_cat_pub.publish(top3_msg)
+        # Top-K categories
+        top3_msg = String()
+        for i in range(3):
+            top3_msg.data += (
+                f"{self.categories[top3_id[i]]} [p={top3_p[i].item():0.2f}] |"
+            )
+        self.detection_cat_pub.publish(top3_msg)
 
-        # if self.publish_highlight:
-        #     color = [0, 255, 0] if detection_bool else [0, 0, 255]
-        #     img_highlight = cv2.copyMakeBorder(
-        #         img, 10, 10, 10, 10, cv2.BORDER_CONSTANT, None, value=color
-        #     )
-        #     font = cv2.FONT_HERSHEY_SIMPLEX
-        #     hl_text = f"{self.target_class} [p={target_prob:0.2f}] [{int(1e3 * inf_time)} ms]"
-        #     cv2.putText(img_highlight, hl_text, (25, 30), font, 0.5, color)
-        #     highlight_msg = self.bridge.cv2_to_imgmsg(
-        #         img_highlight, encoding="bgr8"
-        #     )
-        #     self.highlight_pub.publish(highlight_msg)
+        if self.publish_highlight:
+            color = [0, 255, 0] if detection_bool else [0, 0, 255]
+            img_highlight = cv2.copyMakeBorder(
+                img, 10, 10, 10, 10, cv2.BORDER_CONSTANT, None, value=color
+            )
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            hl_text = f"{self.target_class} [p={target_prob:0.2f}] [{int(1e3 * inf_time)} ms]"
+            cv2.putText(img_highlight, hl_text, (25, 30), font, 0.5, color)
+            highlight_msg = self.bridge.cv2_to_imgmsg(
+                img_highlight, encoding="bgr8"
+            )
+            self.highlight_pub.publish(highlight_msg)
 
     def classify(self, img_cv):
         start_time = time.perf_counter()
@@ -125,15 +121,14 @@ class MobileNetDetector(Node):
 
         with torch.no_grad():
             output = self.model(img)
-        print(output)
-        #inference_time = time.perf_counter() - start_time
+        inference_time = time.perf_counter() - start_time
 
-        #probabilities = torch.nn.functional.softmax(output[0], dim=0)
-        #top3_prob, top3_catid = torch.topk(probabilities, 3)
+        probabilities = torch.nn.functional.softmax(output[0], dim=0)
+        top3_prob, top3_catid = torch.topk(probabilities, 3)
 
-        #target_prob = probabilities[self.target_class_index].item()
+        target_prob = probabilities[self.target_class_index].item()
 
-        #return top3_prob, top3_catid, target_prob, inference_time
+        return top3_prob, top3_catid, target_prob, inference_time
 
 if __name__ == "__main__":
     rclpy.init()
