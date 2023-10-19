@@ -13,6 +13,7 @@ import cv2
 import torch
 from torchvision import transforms
 from torchvision.models.detection import ssdlite320_mobilenet_v3_large
+#from torchvision.utils import draw_bounding_boxes
 
 
 class MobileNetDetector(Node):
@@ -20,7 +21,7 @@ class MobileNetDetector(Node):
         super().__init__("mobilenet_detector")
 
         # Setup ROS Parameters
-        self.declare_parameter("threshold", 0.8)
+        self.declare_parameter("threshold", 0.5)
         self.declare_parameter("target_class", "street sign")
         self.declare_parameter("republish_img", False)
         self.declare_parameter(
@@ -29,7 +30,6 @@ class MobileNetDetector(Node):
 
         self.publish_highlight = self.get_parameter("republish_img").value
         self.target_class = self.get_parameter("target_class").value
-        self.threshold = self.get_parameter("threshold").value
         self.classes_path = self.get_parameter("classes_path").value
 
         # Load classes
@@ -43,11 +43,6 @@ class MobileNetDetector(Node):
             raise e
 
         # load the model from torch hub
-        #self.model = torch.hub.load(
-        #    "pytorch/vision:v0.10.0",
-        #    "ssdlite320_mobilenet_v3_large",
-        #    pretrained=True,
-        #)
         self.model = ssdlite320_mobilenet_v3_large(pretrained=True)
 
         # Check CUDA
@@ -58,16 +53,7 @@ class MobileNetDetector(Node):
         self.model.eval()
 
         # Setup image preprocessing
-        self.preprocess = transforms.Compose(
-            [
-                transforms.ToTensor(),
-                #transforms.Resize(256, antialias=True),
-                #transforms.CenterCrop(224),
-                #transforms.Normalize(
-                #    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                #),
-            ]
-        )
+        self.preprocess = transforms.Compose([transforms.ToTensor()])
 
         # CvBridge
         self.bridge = CvBridge()
@@ -83,12 +69,36 @@ class MobileNetDetector(Node):
         if self.publish_highlight:
             self.highlight_pub = self.create_publisher(Image, "/detector_image", 10)
 
-    def image_callback(self, img_msg):
-        img = self.bridge.imgmsg_to_cv2(img_msg, "bgr8")
+    @property
+    def threshold(self) -> float:
+        return self.get_parameter("threshold").value
 
-        # Run model on image
-        self.classify(img[..., ::-1].copy())
-        #top3_p, top3_id, target_prob, inf_time = self.classify(img.copy())
+    def image_callback(self, img_msg):
+        img = self.bridge.imgmsg_to_cv2(img_msg, "rgb8")
+
+        # Run detection model on image
+        start_time = time.perf_counter()
+        img = self.preprocess(img)
+        img_cuda = img.unsqueeze(0).to(self.device)
+
+        with torch.no_grad():
+            output = self.model(img_cuda)[0]
+        inference_time = time.perf_counter() - start_time
+
+        # parse detection model output
+        boxes = output["boxes"].cpu().numpy()
+        scores = output["scores"].cpu().numpy()
+        classes = output["labels"].cpu().numpy()
+
+        # filter with threshold
+        valid_mask = scores > self.threshold
+        boxes = boxes[valid_mask]
+        scores = scores[valid_mask]
+        classes = classes[valid_mask]
+
+        print(img.shape)
+
+        #top3_p, top3_id, target_prob, inf_time = self.detect(img.copy())
 
         # detection_bool = target_prob >= self.threshold
 
@@ -118,22 +128,6 @@ class MobileNetDetector(Node):
         #     )
         #     self.highlight_pub.publish(highlight_msg)
 
-    def classify(self, img_cv):
-        start_time = time.perf_counter()
-        img = self.preprocess(img_cv)
-        img = img.unsqueeze(0).to(self.device)
-
-        with torch.no_grad():
-            output = self.model(img)
-        print(output)
-        #inference_time = time.perf_counter() - start_time
-
-        #probabilities = torch.nn.functional.softmax(output[0], dim=0)
-        #top3_prob, top3_catid = torch.topk(probabilities, 3)
-
-        #target_prob = probabilities[self.target_class_index].item()
-
-        #return top3_prob, top3_catid, target_prob, inference_time
 
 if __name__ == "__main__":
     rclpy.init()
