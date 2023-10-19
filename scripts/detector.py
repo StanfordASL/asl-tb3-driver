@@ -7,13 +7,28 @@ import rclpy
 from rclpy.node import Node
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
-from std_msgs.msg import String, Bool
+from std_msgs.msg import Bool
 import cv2
 
 import torch
 from torchvision import transforms
 from torchvision.models.detection import ssdlite320_mobilenet_v3_large
-#from torchvision.utils import draw_bounding_boxes
+from torchvision.utils import draw_bounding_boxes
+
+COCO_LABELS = [
+    '__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+    'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'N/A', 'stop sign',
+    'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
+    'elephant', 'bear', 'zebra', 'giraffe', 'N/A', 'backpack', 'umbrella', 'N/A', 'N/A',
+    'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
+    'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+    'bottle', 'N/A', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
+    'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza',
+    'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'N/A', 'dining table',
+    'N/A', 'N/A', 'toilet', 'N/A', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone',
+    'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'N/A', 'book',
+    'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
+]
 
 
 class MobileNetDetector(Node):
@@ -22,25 +37,10 @@ class MobileNetDetector(Node):
 
         # Setup ROS Parameters
         self.declare_parameter("threshold", 0.5)
-        self.declare_parameter("target_class", "street sign")
+        self.declare_parameter("target_class", "stop sign")
         self.declare_parameter("republish_img", False)
-        self.declare_parameter(
-            "classes_path", "~/tb_ws/src/asl_tb3_drivers/configs/imagenet_classes.txt"
-        )
 
         self.publish_highlight = self.get_parameter("republish_img").value
-        self.target_class = self.get_parameter("target_class").value
-        self.classes_path = self.get_parameter("classes_path").value
-
-        # Load classes
-        with open(self.classes_path, "r") as f:
-            self.categories = [s.strip() for s in f.readlines()]
-
-        try:
-            self.target_class_index = self.categories.index(self.target_class)
-        except ValueError as e:
-            print("Class specified with target_class is not an imagenet 1k class!")
-            raise e
 
         # load the model from torch hub
         self.model = ssdlite320_mobilenet_v3_large(pretrained=True)
@@ -63,7 +63,6 @@ class MobileNetDetector(Node):
             Image, "/image", self.image_callback, 10
         )
 
-        self.detection_cat_pub = self.create_publisher(String, "/detector_top3", 10)
         self.detection_bool_pub = self.create_publisher(Bool, "/detector_bool", 10)
 
         if self.publish_highlight:
@@ -73,60 +72,58 @@ class MobileNetDetector(Node):
     def threshold(self) -> float:
         return self.get_parameter("threshold").value
 
+    @property
+    def target_class(self) -> str:
+        return self.get_parameter("target_class").value
+
     def image_callback(self, img_msg):
-        img = self.bridge.imgmsg_to_cv2(img_msg, "rgb8")
+        img_cv = self.bridge.imgmsg_to_cv2(img_msg, "rgb8")
 
         # Run detection model on image
         start_time = time.perf_counter()
-        img = self.preprocess(img)
-        img_cuda = img.unsqueeze(0).to(self.device)
+        img_cpu = self.preprocess(img_cv)
+        img_cuda = img_cpu.unsqueeze(0).to(self.device)
 
         with torch.no_grad():
             output = self.model(img_cuda)[0]
         inference_time = time.perf_counter() - start_time
 
-        # parse detection model output
-        boxes = output["boxes"].cpu().numpy()
-        scores = output["scores"].cpu().numpy()
-        classes = output["labels"].cpu().numpy()
-
         # filter with threshold
-        valid_mask = scores > self.threshold
-        boxes = boxes[valid_mask]
-        scores = scores[valid_mask]
-        classes = classes[valid_mask]
+        valid_mask = output["scores"] > self.threshold
+        boxes = output["boxes"][valid_mask]
+        scores = output["scores"][valid_mask]
+        classes = output["labels"][valid_mask].cpu().numpy()
 
-        print(img.shape)
+        colors = []
+        viz_texts = []
+        detection_bool = Bool()
+        for i in range(classes.shape[0]):
+            if COCO_LABELS[classes[i]] == self.target_class:
+                colors.append((0, 255, 0))
+                detection_bool.data = True
+            else:
+                colors.append((0, 0, 255))
+            viz_texts.append(f"{COCO_LABELS[classes[i]]} [p={scores[i]:.3f}]")
 
-        #top3_p, top3_id, target_prob, inf_time = self.detect(img.copy())
+        # detection succecss
+        self.detection_bool_pub.publish(detection_bool)
 
-        # detection_bool = target_prob >= self.threshold
+        # visualize
+        img_viz = draw_bounding_boxes(torch.from_numpy(img_cv.transpose(2, 0, 1)),
+                                      boxes,
+                                      viz_texts,
+                                      colors)
 
-        # # Publish detection message
-        # bool_msg = Bool()
-        # bool_msg.data = detection_bool
-        # self.detection_bool_pub.publish(bool_msg)
-
-        # # Top-K categories
-        # top3_msg = String()
-        # for i in range(3):
-        #     top3_msg.data += (
-        #         f"{self.categories[top3_id[i]]} [p={top3_p[i].item():0.2f}] |"
-        #     )
-        # self.detection_cat_pub.publish(top3_msg)
-
-        # if self.publish_highlight:
-        #     color = [0, 255, 0] if detection_bool else [0, 0, 255]
-        #     img_highlight = cv2.copyMakeBorder(
-        #         img, 10, 10, 10, 10, cv2.BORDER_CONSTANT, None, value=color
-        #     )
-        #     font = cv2.FONT_HERSHEY_SIMPLEX
-        #     hl_text = f"{self.target_class} [p={target_prob:0.2f}] [{int(1e3 * inf_time)} ms]"
-        #     cv2.putText(img_highlight, hl_text, (25, 30), font, 0.5, color)
-        #     highlight_msg = self.bridge.cv2_to_imgmsg(
-        #         img_highlight, encoding="bgr8"
-        #     )
-        #     self.highlight_pub.publish(highlight_msg)
+        if self.publish_highlight:
+            img_viz = img_viz.cpu().numpy().transpose(1, 2, 0)
+            color = [0, 255, 0]
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            hl_text = f"[{int(1e3 * inference_time)} ms]"
+            cv2.putText(img_viz, hl_text, (25, 30), font, 0.5, color)
+            highlight_msg = self.bridge.cv2_to_imgmsg(
+                img_viz, encoding="rgb8"
+            )
+            self.highlight_pub.publish(highlight_msg)
 
 
 if __name__ == "__main__":

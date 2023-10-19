@@ -44,10 +44,9 @@ def generate_launch_description():
                 output="screen",
                 parameters=[
                     {
-                        "threshold": 0.3,
-                        "target_class": "street sign",
+                        "threshold": 0.5,
+                        "target_class": "stop sign",
                         "republish_img": True,
-                        "classes_path": "/home/aa274/ros2_ws/src/asl-tb3-driver/configs/imagenet_classes.txt",
                     },
                 ],
             ),
