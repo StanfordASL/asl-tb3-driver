@@ -71,9 +71,9 @@ def generate_launch_description():
 
         IncludeLaunchDescription(
             PathJoinSubstitution([
-                FindPackageShare("velodyne"),
+                FindPackageShare("asl_tb3_driver"),
                 "launch",
-                "velodyne-all-nodes-VLP16-composed-launch.py",
+                "velodyne.launch.py",
             ]),
         ),
         Node(
