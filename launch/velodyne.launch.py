@@ -46,8 +46,8 @@ def generate_launch_description():
     with open(driver_params_file, 'r') as f:
         driver_params = yaml.safe_load(f)['velodyne_driver_node']['ros__parameters']
 
-    convert_share_dir = ament_index_python.packages.get_package_share_directory('asl_tb3_driver')
-    convert_params_file = os.path.join(convert_share_dir, 'configs', 'velodyne.yaml')
+    asl_share_dir = ament_index_python.packages.get_package_share_directory('asl_tb3_driver')
+    convert_params_file = os.path.join(asl_share_dir, 'configs', 'velodyne.yaml')
     with open(convert_params_file, 'r') as f:
         convert_params = yaml.safe_load(f)['velodyne_transform_node']['ros__parameters']
 
