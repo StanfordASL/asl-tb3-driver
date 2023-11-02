@@ -8,6 +8,11 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 
+install(PROGRAMS
+    scripts/detector.py
+    DESTINATION lib/${PROJECT_NAME}
+)
+
 install(DIRECTORY configs launch
         DESTINATION share/${PROJECT_NAME})
 
