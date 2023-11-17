@@ -38,9 +38,7 @@ class MobileNetDetector(Node):
         # Setup ROS Parameters
         self.declare_parameter("threshold", 0.5)
         self.declare_parameter("target_class", "stop sign")
-        self.declare_parameter("republish_img", False)
-
-        self.publish_highlight = self.get_parameter("republish_img").value
+        self.declare_parameter("republish_img", True)
 
         # load the model from torch hub
         self.model = ssdlite320_mobilenet_v3_large(pretrained=True)
@@ -65,8 +63,12 @@ class MobileNetDetector(Node):
 
         self.detection_bool_pub = self.create_publisher(Bool, "/detector_bool", 10)
 
-        if self.publish_highlight:
+        if self.republish_img:
             self.highlight_pub = self.create_publisher(Image, "/detector_image", 10)
+
+    @property
+    def republish_img(self) -> bool:
+        return self.get_parameter("republish_img").value
 
     @property
     def threshold(self) -> float:
@@ -114,7 +116,7 @@ class MobileNetDetector(Node):
                                       viz_texts,
                                       colors)
 
-        if self.publish_highlight:
+        if self.republish_img:
             img_viz = img_viz.cpu().numpy().transpose(1, 2, 0)
             color = [0, 255, 0]
             font = cv2.FONT_HERSHEY_SIMPLEX
