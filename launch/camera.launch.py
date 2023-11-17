@@ -41,14 +41,6 @@ def generate_launch_description():
             Node(
                 package="asl_tb3_driver",
                 executable="detector.py",
-                output="screen",
-                parameters=[
-                    {
-                        "threshold": 0.5,
-                        "target_class": "stop sign",
-                        "republish_img": True,
-                    },
-                ],
             ),
             Node(
                 package="image_transport",
