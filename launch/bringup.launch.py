@@ -24,6 +24,7 @@
 import os
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -33,12 +34,19 @@ def generate_launch_description():
     TURTLEBOT3_MODEL = os.environ["TURTLEBOT3_MODEL"]
 
     usb_port = LaunchConfiguration("usb_port", default="/dev/ttyACM0")
+    camera = LaunchConfiguration("camera", default="false")
 
     return LaunchDescription([
         DeclareLaunchArgument(
             "usb_port",
             default_value=usb_port,
             description="Connected USB port with OpenCR"
+        ),
+        DeclareLaunchArgument(
+            "camera",
+            default_value=camera,
+            choices=["true", "false"],
+            description="set to true to bring up USB camera and detector"
         ),
 
         ########################################################
@@ -95,4 +103,17 @@ def generate_launch_description():
             executable='async_slam_toolbox_node',
             name='slam_toolbox',
         ),
+
+        ########################################################
+        # -------------------- USB Camera -------------------- #
+        ########################################################
+
+        IncludeLaunchDescription(
+            PathJoinSubstitution([
+                FindPackageShare("asl_tb3_driver"),
+                "launch",
+                "camera.launch.py",
+            ]),
+            condition=IfCondition(camera),
+        )
     ])
