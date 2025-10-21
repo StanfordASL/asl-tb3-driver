@@ -41,7 +41,12 @@ def generate_launch_description():
             Node(
                 package="asl_tb3_driver",
                 executable="detector.py",
-                parameters=[{"target_classes": ["bottle", "cup"]}]
+                parameters=[
+                    {
+                        "target_classes": ["bottle", "cup"], 
+                        "threshold": 0.9
+                    }
+                ]
             ),
             Node(
                 package="image_transport",
