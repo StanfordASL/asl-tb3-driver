@@ -41,6 +41,7 @@ def generate_launch_description():
             Node(
                 package="asl_tb3_driver",
                 executable="detector.py",
+                parameters=[{"target_classes": ["stop sign", "traffic light"]}]
             ),
             Node(
                 package="image_transport",
