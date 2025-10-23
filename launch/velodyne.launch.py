@@ -60,7 +60,7 @@ def generate_launch_description():
         laserscan_params = yaml.safe_load(f)['velodyne_laserscan_node']['ros__parameters']
 
     # Override ring parameter: use specific ring (0-15) or -1 for default ring (7)
-    laserscan_params['ring'] = 5
+    laserscan_params['ring'] = 6
 
     container = ComposableNodeContainer(
             name='velodyne_container',
