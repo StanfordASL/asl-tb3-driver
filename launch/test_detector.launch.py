@@ -45,7 +45,7 @@ def generate_launch_description():
                 parameters=[
                     {
                         "threshold": 0.5,
-                        "target_class": "stop sign",
+                        "target_class": "person",
                         "republish_img": True,
                     },
                 ],

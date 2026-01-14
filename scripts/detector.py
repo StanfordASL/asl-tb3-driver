@@ -40,7 +40,7 @@ class MobileNetDetector(Node):
 
         # Setup ROS Parameters
         self.declare_parameter("threshold", 0.5)
-        self.declare_parameter("target_classes", ["stop sign", "traffic light"])
+        self.declare_parameter("target_classes", ["person", "airplane"])
         self.declare_parameter("republish_img", True)
 
         # Check CUDA
