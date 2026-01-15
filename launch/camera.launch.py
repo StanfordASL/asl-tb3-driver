@@ -43,7 +43,7 @@ def generate_launch_description():
                 executable="detector.py",
                 parameters=[
                     {
-                        "target_classes": ["bottle", "cup"], 
+                        "target_classes": ["person", "airplane"], 
                         "threshold": 0.9
                     }
                 ]
