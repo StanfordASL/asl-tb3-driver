@@ -43,25 +43,10 @@ def generate_launch_description():
                 executable="detector.py",
                 parameters=[
                     {
-                        "target_classes": ["person", "airplane"], 
+                        "target_classes": ["person", "airplane"],
                         "threshold": 0.9
                     }
                 ]
-            ),
-            Node(
-                package="image_transport",
-                executable="republish",
-                arguments=["raw", "compressed"],
-                remappings=[("in", "image"), ("out/compressed", "image/compressed")],
-            ),
-            Node(
-                package="image_transport",
-                executable="republish",
-                arguments=["raw", "compressed"],
-                remappings=[
-                    ("in", "detector_image"),
-                    ("out/compressed", "detector_image/compressed"),
-                ],
             ),
         ]
     )

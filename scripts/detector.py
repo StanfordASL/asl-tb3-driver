@@ -67,20 +67,20 @@ class MobileNetDetector(Node):
         self.preprocess = transforms.Compose([transforms.ToTensor()])
         self.bridge = CvBridge()
 
-        # QoS profile for sensor data (subscription only)
+        # QoS profile for sensor data - BEST_EFFORT with depth 1 for low latency
         sensor_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
             depth=1
         )
 
-        # Publishers (use default RELIABLE for local republish node to receive)
+        # Publishers
         self.detection_bool_pub = self.create_publisher(Bool, "/detector_bool", 10)
         self.detection_class_pub = self.create_publisher(String, "/detector_class", 10)
         if self.republish_img:
-            self.highlight_pub = self.create_publisher(Image, "/detector_image", 1)
+            self.highlight_pub = self.create_publisher(Image, "/detector_image", sensor_qos)
 
-        # Subscriber (BEST_EFFORT to receive from cam2image)
+        # Subscriber
         self.image_sub = self.create_subscription(
             Image, "/image", self.image_callback, sensor_qos
         )
