@@ -5,6 +5,7 @@ import pdb
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from std_msgs.msg import Bool, String
@@ -66,15 +67,22 @@ class MobileNetDetector(Node):
         self.preprocess = transforms.Compose([transforms.ToTensor()])
         self.bridge = CvBridge()
 
+        # QoS profile for sensor data
+        sensor_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1
+        )
+
         # Publishers
         self.detection_bool_pub = self.create_publisher(Bool, "/detector_bool", 10)
         self.detection_class_pub = self.create_publisher(String, "/detector_class", 10)
         if self.republish_img:
-            self.highlight_pub = self.create_publisher(Image, "/detector_image", 10)
+            self.highlight_pub = self.create_publisher(Image, "/detector_image", sensor_qos)
 
         # Subscriber
         self.image_sub = self.create_subscription(
-            Image, "/image", self.image_callback, 10
+            Image, "/image", self.image_callback, sensor_qos
         )
 
     @property
