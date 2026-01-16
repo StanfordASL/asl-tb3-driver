@@ -70,14 +70,14 @@ class MobileNetDetector(Node):
         # CvBridge
         self.bridge = CvBridge()
 
-        # QoS profile for sensor data
+        # QoS profile for sensor data (subscription only)
         sensor_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
             depth=1
         )
 
-        # Image subscriber
+        # Image subscriber (BEST_EFFORT to receive from cam2image)
         self.image_sub = self.create_subscription(
             Image, "/image", self.image_callback, sensor_qos
         )
@@ -85,8 +85,9 @@ class MobileNetDetector(Node):
         self.detection_cat_pub = self.create_publisher(String, "/detector_top3", 10)
         self.detection_bool_pub = self.create_publisher(Bool, "/detector_bool", 10)
 
+        # Publisher uses default RELIABLE for local republish node to receive
         if self.publish_highlight:
-            self.highlight_pub = self.create_publisher(Image, "/detector_image", sensor_qos)
+            self.highlight_pub = self.create_publisher(Image, "/detector_image", 1)
 
     def image_callback(self, img_msg):
         img = self.bridge.imgmsg_to_cv2(img_msg, "bgr8")

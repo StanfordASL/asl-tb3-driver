@@ -53,16 +53,6 @@ def generate_launch_description():
                 executable="republish",
                 arguments=["raw", "compressed"],
                 remappings=[("in", "image"), ("out/compressed", "image/compressed")],
-                parameters=[{
-                    "qos_overrides": {
-                        "/image/compressed": {
-                            "publisher": {
-                                "reliability": "best_effort",
-                                "depth": 1
-                            }
-                        }
-                    }
-                }],
             ),
             Node(
                 package="image_transport",
@@ -72,16 +62,6 @@ def generate_launch_description():
                     ("in", "detector_image"),
                     ("out/compressed", "detector_image/compressed"),
                 ],
-                parameters=[{
-                    "qos_overrides": {
-                        "/detector_image/compressed": {
-                            "publisher": {
-                                "reliability": "best_effort",
-                                "depth": 1
-                            }
-                        }
-                    }
-                }],
             ),
         ]
     )
