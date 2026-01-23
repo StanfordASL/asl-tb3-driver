@@ -37,6 +37,11 @@ def generate_launch_description():
                 executable="cam2image",
                 output="log",
                 ros_arguments=["--log-level", "cam2image:=WARN"],
+                parameters=[
+                    {
+                        "reliability": "best_effort"
+                    }
+                ]
             ),
             Node(
                 package="asl_tb3_driver",
