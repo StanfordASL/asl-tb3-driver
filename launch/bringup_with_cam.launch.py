@@ -52,7 +52,9 @@ def generate_launch_description():
             ros_arguments=["--log-level", "cam2image:=WARN"],
             parameters=[
                     {
-                        "reliability": "best_effort"
+                        "reliability": "best_effort",
+                        "frequency": 10.0
+
                     }
                 ]
         ),
