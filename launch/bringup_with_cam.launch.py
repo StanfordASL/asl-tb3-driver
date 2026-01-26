@@ -53,8 +53,7 @@ def generate_launch_description():
             parameters=[
                     {
                         "reliability": "best_effort",
-                        "frequency": 10.0
-
+                        "frequency": 6.0
                     }
                 ]
         ),
